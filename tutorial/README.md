@@ -205,6 +205,36 @@ docker-compose -f docker-compose-sqlserver.yaml exec sqlserver bash -c '/opt/mss
 docker-compose -f docker-compose-sqlserver.yaml down
 ```
 
+## Using DB2 Database Server
+```shell
+# Start the topology as defined in http://debezium.io/docs/tutorial/
+export DEBEZIUM_VERSION=1.0
+# DEBEZIUM_DB2_VOLUME is an empty local direcotry
+export DEBEZIUM_DB2_VOLUME=<local persistent volume directory>
+
+docker-compose -f docker-compose-db2.yaml up
+
+# Start DB2 Server connector
+curl -i -X POST -H "Accept:application/json" -H  "Content-Type:application/json" http://localhost:8083/connectors/ -d @register-db2.json
+
+# Consume messages from a Debezium topic
+docker-compose -f docker-compose-db2.yaml exec kafka /kafka/bin/kafka-console-consumer.sh \
+    --bootstrap-server kafka:9092 \
+    --from-beginning \
+    --property print.key=true \
+    --topic server1.dbo.customers
+
+
+# Modify records in the database via DB2 Server client (do not forget to add `GO` command to execute the statement)
+docker-compose -f docker-compose-db2.yaml exec db2server bash -c 'su - db2inst1'
+
+
+
+# Shut down the cluster
+docker-compose -f docker-compose-sqlserver.yaml down    
+
+```
+
 ## Debugging
 
 Should you need to establish a remote debugging session into a deployed connector, add the following to the `environment` section of the `connect` in the Compose file service:
